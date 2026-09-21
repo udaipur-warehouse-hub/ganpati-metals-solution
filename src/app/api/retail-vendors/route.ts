@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { searchSafe } from "@/lib/search-safe";
 
 // GET /api/retail-vendors?q=search -> vendors with their live balance
 export async function GET(req: NextRequest) {
@@ -13,7 +14,8 @@ export async function GET(req: NextRequest) {
     .order("name", { ascending: true });
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,firm_name.ilike.%${q}%,phone.ilike.%${q}%`);
+    const sq = searchSafe(q);
+    query = query.or(`name.ilike.%${sq}%,firm_name.ilike.%${sq}%,phone.ilike.%${sq}%`);
   }
 
   const { data, error } = await query;

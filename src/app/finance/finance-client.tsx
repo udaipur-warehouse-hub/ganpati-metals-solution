@@ -26,15 +26,22 @@ export function FinanceClient() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function loadAll() {
     setLoading(true);
+    setError(null);
     const [sRes, eRes, empRes] = await Promise.all([
       fetch("/api/finance/summary"),
       fetch("/api/expenses?limit=30"),
       fetch("/api/employees"),
     ]);
-    setSummary(await sRes.json());
+    const sData = await sRes.json();
+    if (!sRes.ok) {
+      setError(sData.error || "Could not load cashflow summary");
+    } else {
+      setSummary(sData);
+    }
     setExpenses((await eRes.json()).expenses ?? []);
     setEmployees((await empRes.json()).employees ?? []);
     setLoading(false);
@@ -47,7 +54,9 @@ export function FinanceClient() {
   return (
     <div className="space-y-5">
       <Panel title="Cashflow" subtitle={summary ? `This month (${summary.month})` : undefined}>
-        {loading || !summary ? (
+        {error ? (
+          <div className="text-sm text-danger bg-danger/10 border border-danger/30 rounded-lg px-3 py-2">{error}</div>
+        ) : loading || !summary ? (
           <p className="text-muted text-sm">Loading…</p>
         ) : (
           <div className="space-y-4">
@@ -160,6 +169,10 @@ function RecordExpensePanel({
   async function submit() {
     if (!amount || amount <= 0) {
       setError("Enter an amount greater than 0");
+      return;
+    }
+    if (category === "salary" && !employeeId) {
+      setError("Pick which employee this salary payment is for");
       return;
     }
     setSaving(true);

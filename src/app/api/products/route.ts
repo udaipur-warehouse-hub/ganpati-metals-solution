@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { searchSafe } from "@/lib/search-safe";
 
 // GET /api/products?q=search -> list/search active items (for catalog page + billing search)
 export async function GET(req: NextRequest) {
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     .limit(q ? 50 : 300);
 
   if (q) {
-    query = query.or(`name.ilike.%${q}%,sku_code.ilike.%${q}%`);
+    query = query.or(`name.ilike.%${searchSafe(q)}%,sku_code.ilike.%${searchSafe(q)}%`);
   }
 
   const { data, error } = await query;

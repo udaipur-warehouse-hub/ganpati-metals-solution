@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { Employee, Expense } from "@/lib/types";
 import { Panel } from "@/components/panel";
 import { NumberField } from "@/components/number-field";
+import { istMonthRange } from "@/lib/ist-month-range";
 
 export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
   const [employee, setEmployee] = useState<Employee | null>(null);
@@ -32,8 +33,9 @@ export function EmployeeDetailClient({ employeeId }: { employeeId: string }) {
   if (loading) return <p className="text-muted py-10 text-center">Loading…</p>;
   if (error || !employee) return <p className="text-danger py-10 text-center">{error || "Employee not found"}</p>;
 
+  const { startDate: monthStart, endDate: monthEnd } = istMonthRange();
   const paidThisMonth = payments
-    .filter((p) => p.expense_date.slice(0, 7) === new Date().toISOString().slice(0, 7))
+    .filter((p) => p.expense_date >= monthStart && p.expense_date < monthEnd)
     .reduce((s, p) => s + p.amount, 0);
 
   return (

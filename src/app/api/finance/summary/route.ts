@@ -7,25 +7,30 @@ export async function GET() {
   const supabase = supabaseServer();
   const { startUtc, endUtc, startDate, endDate } = istMonthRange();
 
+  const results = await Promise.all([
+    supabase.from("sales").select("total_amount").gte("created_at", startUtc).lt("created_at", endUtc),
+    supabase
+      .from("retail_vendor_ledger")
+      .select("amount")
+      .eq("entry_type", "payment_received")
+      .gte("entry_date", startDate)
+      .lt("entry_date", endDate),
+    supabase
+      .from("credit_vendor_ledger")
+      .select("amount")
+      .eq("entry_type", "payment_received")
+      .gte("entry_date", startDate)
+      .lt("entry_date", endDate),
+    supabase.from("expenses").select("category, amount").gte("expense_date", startDate).lt("expense_date", endDate),
+    supabase.from("retail_vendor_balances").select("balance").eq("is_active", true),
+    supabase.from("credit_vendor_balances").select("balance").eq("is_active", true),
+  ]);
+
+  const failed = results.find((r) => r.error);
+  if (failed?.error) return NextResponse.json({ error: failed.error.message }, { status: 500 });
+
   const [{ data: sales }, { data: retailPayments }, { data: creditPayments }, { data: expenses }, { data: retailBalances }, { data: creditBalances }] =
-    await Promise.all([
-      supabase.from("sales").select("total_amount").gte("created_at", startUtc).lt("created_at", endUtc),
-      supabase
-        .from("retail_vendor_ledger")
-        .select("amount")
-        .eq("entry_type", "payment_received")
-        .gte("entry_date", startDate)
-        .lt("entry_date", endDate),
-      supabase
-        .from("credit_vendor_ledger")
-        .select("amount")
-        .eq("entry_type", "payment_received")
-        .gte("entry_date", startDate)
-        .lt("entry_date", endDate),
-      supabase.from("expenses").select("category, amount").gte("expense_date", startDate).lt("expense_date", endDate),
-      supabase.from("retail_vendor_balances").select("balance").eq("is_active", true),
-      supabase.from("credit_vendor_balances").select("balance").eq("is_active", true),
-    ]);
+    results;
 
   const sum = (rows: { amount?: number; total_amount?: number }[] | null, field: "amount" | "total_amount") =>
     (rows ?? []).reduce((s, r) => s + Number(r[field] ?? 0), 0);

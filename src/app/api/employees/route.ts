@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase-server";
+import { searchSafe } from "@/lib/search-safe";
 
 // GET /api/employees?q=search -> active employees
 export async function GET(req: NextRequest) {
@@ -7,7 +8,10 @@ export async function GET(req: NextRequest) {
   const supabase = supabaseServer();
 
   let query = supabase.from("employees").select("*").eq("is_active", true).order("name", { ascending: true });
-  if (q) query = query.or(`name.ilike.%${q}%,role.ilike.%${q}%,phone.ilike.%${q}%`);
+  if (q) {
+    const sq = searchSafe(q);
+    query = query.or(`name.ilike.%${sq}%,role.ilike.%${sq}%,phone.ilike.%${sq}%`);
+  }
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -30,7 +34,7 @@ export async function POST(req: NextRequest) {
       name: name.trim(),
       role: role?.trim() || null,
       phone: phone?.trim() || null,
-      monthly_salary: monthly_salary ? Number(monthly_salary) : null,
+      monthly_salary: monthly_salary === null || monthly_salary === undefined || monthly_salary === "" ? null : Number(monthly_salary),
       joined_on: joined_on || null,
     })
     .select()

@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
   if (!amount || Number(amount) <= 0) {
     return NextResponse.json({ error: "Amount must be greater than 0" }, { status: 400 });
   }
+  if (category === "salary" && !employee_id) {
+    return NextResponse.json({ error: "A salary expense needs an employee" }, { status: 400 });
+  }
 
   const supabase = supabaseServer();
   const { data, error } = await supabase
